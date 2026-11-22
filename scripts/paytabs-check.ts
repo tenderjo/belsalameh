@@ -20,6 +20,12 @@ assert(!verifyWebhookSignature(body, sig, "other"), "wrong key rejected");
 assert(!verifyWebhookSignature(body, null, "k") && !verifyWebhookSignature(body, "zz", "k"), "missing/garbage header rejected");
 
 async function main() {
+  const qi = process.argv.indexOf("--query");
+  if (qi > 0) {
+    const q = await queryTransaction(process.argv[qi + 1]);
+    console.log("status:", q.payment_result?.response_status, q.payment_result?.response_message, "| cart:", q.cart_id, q.cart_amount, q.cart_currency);
+    return;
+  }
   if (process.argv.includes("--live")) {
     assert(paytabsConfigured(), "PAYTABS_PROFILE_ID / PAYTABS_SERVER_KEY are set");
     const ref = "BSL-CHECK-" + Date.now();
@@ -27,9 +33,7 @@ async function main() {
       reference: ref, amountMinor: 1000, currency: "JOD", description: "paytabs-check", customer: { name: "Test Buyer", email: "test@example.com" },
     });
     console.log("\nOpen this URL and pay with a PayTabs TEST card:\n" + redirectUrl + "\n");
-    const q = await queryTransaction(tranRef);
-    assert(q.cart_id === ref, "query returns our cart_id");
-    console.log("status now:", q.payment_result?.response_status ?? "(none yet)", "| tran_ref:", tranRef);
+    console.log("After paying, check it with: npx tsx --env-file=.env.local scripts/paytabs-check.ts --query " + tranRef);
   }
 }
 main().catch((e) => { console.error(e); process.exit(1); });

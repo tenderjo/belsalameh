@@ -297,6 +297,8 @@ async function settle(reference: string, tranRef?: string): Promise<SettleResult
   try {
     q = await queryTransaction(ref);
   } catch (e) {
+    // PayTabs answers "Transaction not found" (2000) until the buyer actually attempts a payment.
+    if (/not found|2000/i.test(String(e))) return { state: "pending" };
     console.warn(`[payment] PayTabs query failed — reference=${reference}`, e);
     return { state: "error", reason: "gateway_unreachable" };
   }

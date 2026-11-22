@@ -70,7 +70,8 @@ export async function createHostedPayment(o: {
     // PayTabs POSTs the buyer back here (fields: tranRef, cartId, respStatus…) and the
     // server-to-server callback goes to the webhook. Neither is trusted: both are re-queried.
     return: `${siteUrl()}/checkout/return`,
-    callback: `${siteUrl()}/api/webhooks/paytabs`,
+    // PayTabs rejects non-public callbacks, so local dev (http://localhost) relies on the return alone.
+    ...(/^https:\/\/(?!localhost)/.test(siteUrl()) ? { callback: `${siteUrl()}/api/webhooks/paytabs` } : {}),
     hide_shipping: true,
     customer_details: {
       name: o.customer.name,
