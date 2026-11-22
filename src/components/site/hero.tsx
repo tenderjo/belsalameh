@@ -12,13 +12,13 @@ export function Hero() {
         </p>
         <p className="hero__sub hero__sub--muted">Small perks, real savings, provided directly by our airline partners.</p>
         <div className="hero__cta-row">
-          <JoinTrigger className="btn btn--gold">Join Belsalameh for $39</JoinTrigger>
+          <JoinTrigger className="btn btn--gold">Join Belsalameh for $49</JoinTrigger>
           <a href="#services" className="btn btn--ghost">
             See how it works
           </a>
         </div>
         <p className="hero__microcopy">
-          Early-bird: <b>Access through Dec 31, 2029 for $39</b>, then $39/year
+          Early-bird: <b>Access through Dec 31, 2029 for $49</b>, then $49/year
         </p>
       </div>
     </section>
