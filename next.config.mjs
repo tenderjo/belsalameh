@@ -5,6 +5,9 @@ const nextConfig = {
   // Self-contained build: `next build` emits .next/standalone/ with its own
   // server.js and a minimal node_modules. Deployed as an IIS site via web.config.
   output: "standalone",
+  // Pin the project root: without this Next may pick a lockfile in a parent folder and nest server.js
+  // under that path inside .next/standalone (breaks scripts/bundle.mjs and web.config).
+  outputFileTracingRoot: process.cwd(),
   // Hide the on-screen dev indicator badge.
   devIndicators: false,
   // Phase 0 scaffold: keep builds unblocked by lint. Re-enable (remove this)
