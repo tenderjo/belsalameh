@@ -5,8 +5,8 @@ import { capturePayment } from "@/lib/payments";
 import { ALLOW_SIMULATED_PAYMENT } from "@/lib/config";
 
 /**
- * Manual stand-in for the MEPS payment callback, used on the hand-off page
- * while payments are not live. Phase 3 removes this; the MEPS webhook route
+ * Manual stand-in for the payment callback, used on the hand-off page
+ * while payments are not live. Not used when PAYMENTS_LIVE is on; the PayTabs webhook route
  * calls the same `capturePayment()`.
  */
 export async function confirmSimulatedPayment(formData: FormData) {

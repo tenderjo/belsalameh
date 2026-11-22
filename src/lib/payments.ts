@@ -8,6 +8,7 @@ import { newMembershipId } from "./membership-id";
 import { formatExpiry } from "./format";
 import { deliverMembershipEmails, notifySubject, proofSubject, type MemberFacts } from "./emails";
 import { EMAIL_COMPANY_NOTIFY } from "./config";
+import { queryTransaction, toMajor } from "./paytabs";
 
 /**
  * Payment lifecycle. Both the manual "confirm" affordance on the hand-off page
@@ -45,6 +46,8 @@ export async function createPendingTransaction(input: {
   adultConfirmed?: boolean;
   /** Per-person price and length for this order. Omit to use the plan currently on sale (the online checkout). */
   plan?: { priceMinor: number; durationMonths: number };
+  /** Who takes the money: the online gateway (default) or "WALKIN" for cash at the desk. */
+  provider?: string;
 }): Promise<{ reference: string }> {
   const reference = newReference();
   const party = input.party ?? [];
@@ -53,7 +56,7 @@ export async function createPendingTransaction(input: {
   await db.transaction.create({
     data: {
       reference,
-      provider: "MEPS",
+      provider: input.provider ?? "PAYTABS",
       // The amount is always computed here, never taken from the client. The length is
       // stored so a later change to the plan can't alter an order that is already in flight.
       amountMinor: plan.priceMinor * (1 + party.length),
@@ -252,4 +255,68 @@ export async function capturePayment(
     reference,
     people: people.map((p, i) => ({ fullName: p.fullName, membershipId: ids[i] })),
   };
+}
+
+export type SettleResult =
+  | { state: "paid"; capture: Extract<CaptureResult, { ok: true }> }
+  | { state: "pending" } // no payment seen yet / still being processed by the gateway
+  | { state: "declined"; message: string }
+  | { state: "not_found" }
+  | { state: "error"; reason: string };
+
+// ponytail: per-process lock so the webhook and the browser return arriving together
+// can't both create members. Needs a DB-level claim if the app ever runs multi-instance.
+const settling = new Map<string, Promise<SettleResult>>();
+
+/**
+ * Decide an order's fate from PayTabs itself, never from the caller's payload.
+ * Used by the webhook, the browser return and the processing page — all three route here.
+ * `tranRef` comes from the callback/return when present; otherwise the one stored at checkout.
+ */
+export function settleByReference(reference: string, tranRef?: string): Promise<SettleResult> {
+  const running = settling.get(reference);
+  if (running) return running;
+  const p = settle(reference, tranRef).finally(() => settling.delete(reference));
+  settling.set(reference, p);
+  return p;
+}
+
+async function settle(reference: string, tranRef?: string): Promise<SettleResult> {
+  const txn = await db.transaction.findUnique({ where: { reference } });
+  if (!txn) return { state: "not_found" };
+
+  if (txn.status === "CAPTURED") {
+    const c = await capturePayment(reference);
+    return c.ok ? { state: "paid", capture: c } : { state: "error", reason: c.reason };
+  }
+
+  const ref = tranRef || txn.providerRef;
+  if (!ref) return { state: "pending" };
+
+  let q;
+  try {
+    q = await queryTransaction(ref);
+  } catch (e) {
+    console.warn(`[payment] PayTabs query failed — reference=${reference}`, e);
+    return { state: "error", reason: "gateway_unreachable" };
+  }
+
+  const status = q.payment_result?.response_status;
+  if (status === "D" || status === "E" || status === "X" || status === "V") {
+    // Left PENDING on purpose: the hosted page lets the buyer retry with another card.
+    return { state: "declined", message: q.payment_result?.response_message ?? "Payment was not completed" };
+  }
+  if (status !== "A") return { state: "pending" };
+
+  // Approved — but is it for THIS order and the amount we asked for?
+  const amountOk = Math.abs(Number(q.cart_amount) - toMajor(txn.amountMinor, txn.currency)) < 0.0005;
+  if (q.cart_id !== reference || q.cart_currency !== txn.currency || !amountOk) {
+    const reason = `mismatch: gateway cart=${q.cart_id} ${q.cart_amount} ${q.cart_currency}, expected ${reference} ${toMajor(txn.amountMinor, txn.currency)} ${txn.currency}`;
+    console.error(`[payment] ${reason}`);
+    await db.transaction.update({ where: { id: txn.id }, data: { failureReason: reason.slice(0, 400) } });
+    return { state: "error", reason: "mismatch" };
+  }
+
+  const c = await capturePayment(reference, { providerRef: q.tran_ref, rawResponse: q });
+  return c.ok ? { state: "paid", capture: c } : { state: "error", reason: c.reason };
 }

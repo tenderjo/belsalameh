@@ -46,8 +46,8 @@ export default async function SuccessPage({
           </dl>
           {!member && (
             <p className="mt-3 border-t border-border pt-3 text-xs text-ink-subtle">
-              No confirmed membership found for this reference yet. In Phase 3 the
-              details are filled in automatically once MEPS confirms the payment.
+              No confirmed membership found for this reference yet. The details
+              are filled in automatically once the payment is confirmed.
             </p>
           )}
         </div>

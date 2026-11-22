@@ -44,6 +44,7 @@ export async function addWalkInMember(_prev: WalkInState, formData: FormData): P
     fullName: parsed.data.fullName,
     email: parsed.data.email,
     plan: { priceMinor, durationMonths },
+    provider: "WALKIN",
   });
   const result = await capturePayment(reference, {
     providerRef: "WALKIN",

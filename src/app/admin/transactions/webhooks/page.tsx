@@ -36,7 +36,7 @@ export default async function WebhooksPage() {
     <div>
       <PageHeader
         title="Webhook / IPN log"
-        description="Every inbound payment notification from MEPS. Processing is idempotent — a repeated event with the same dedupe key is a no-op. Invalid-signature events are rejected."
+        description="Every inbound payment notification from PayTabs. Processing is idempotent — a repeated event with the same dedupe key is a no-op. Invalid-signature events are rejected."
         crumbs={[
           { label: "Admin", href: "/admin" },
           { label: "Transactions", href: "/admin/transactions" },

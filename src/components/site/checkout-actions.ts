@@ -3,16 +3,16 @@
 import { redirect } from "next/navigation";
 import { NAME_TAKEN_MESSAGE, checkoutSchema, toFieldErrors, type CheckoutFieldErrors, type CheckoutState } from "@/lib/checkout";
 import { checkPeople, type PersonCheck } from "@/lib/identity";
+import { db } from "@/lib/db";
+import { PAYMENTS_LIVE } from "@/lib/config";
 import { createPendingTransaction } from "@/lib/payments";
+import { createHostedPayment, paytabsConfigured } from "@/lib/paytabs";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 /**
- * Validates the checkout form, creates a PENDING transaction, and hands off to
- * payment.
- *
- * PHASE 3: replace the redirect target with a signed request to the MEPS hosted
- * payment page. The transaction row and its `reference` are already what the
- * webhook/IPN handler will look up.
+ * Validates the checkout form, creates a PENDING transaction, and hands off to the
+ * PayTabs hosted payment page (PAYMENTS_LIVE=true + PAYTABS_* set). Otherwise it goes
+ * to the demo hand-off page. The webhook / return route look the order up by `reference`.
  */
 export async function startCheckout(
   _prev: CheckoutState,
@@ -63,6 +63,26 @@ export async function startCheckout(
     party: parsed.data.party,
     adultConfirmed: parsed.data.confirmAdult,
   });
+
+  if (PAYMENTS_LIVE && paytabsConfigured()) {
+    const txn = await db.transaction.findUniqueOrThrow({ where: { reference } });
+    let redirectUrl: string;
+    try {
+      const page = await createHostedPayment({
+        reference,
+        amountMinor: txn.amountMinor,
+        currency: txn.currency,
+        description: `Belsalameh membership × ${1 + parsed.data.party.length}`,
+        customer: { name: parsed.data.fullName, email: parsed.data.email, ip },
+      });
+      await db.transaction.update({ where: { id: txn.id }, data: { providerRef: page.tranRef } });
+      redirectUrl = page.redirectUrl;
+    } catch (e) {
+      console.error(`[checkout] could not start PayTabs payment for ${reference}`, e);
+      return { errors: {}, formError: "We couldn't reach the payment provider. Please try again in a moment." };
+    }
+    redirect(redirectUrl); // outside try/catch: redirect() works by throwing
+  }
 
   redirect(`/checkout/processing?ref=${encodeURIComponent(reference)}`);
 }

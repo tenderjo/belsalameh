@@ -49,7 +49,7 @@ export default async function TransactionsPage({
     <div>
       <PageHeader
         title="Transactions"
-        description="Created PENDING at checkout and moved to CAPTURED on payment confirmation. Amounts use the placeholder membership price / currency until confirmed; MEPS webhook confirmation lands in Phase 3."
+        description="Created PENDING at checkout and moved to CAPTURED on payment confirmation. Amounts use the placeholder membership price / currency until confirmed;."
         crumbs={[{ label: "Admin", href: "/admin" }, { label: "Transactions" }]}
       />
 

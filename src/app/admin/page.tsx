@@ -34,7 +34,7 @@ export default async function DashboardPage() {
     <div>
       <PageHeader
         title="Dashboard"
-        description="Live from the database. Revenue uses the placeholder membership price until it is confirmed; payment confirmation is currently manual (MEPS webhook lands in Phase 3)."
+        description="Live from the database. Revenue uses the placeholder membership price until it is confirmed; payment confirmation comes from the PayTabs webhook/return check."
         actions={
           <>
             <Link href="/admin/members/verify" className={buttonClasses("secondary")}>

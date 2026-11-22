@@ -24,7 +24,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
 
   const timeline = [
     { label: "Transaction created", at: txn.createdAt, done: true },
-    { label: "Redirected to MEPS hosted page", at: txn.createdAt, done: true },
+    { label: "Redirected to PayTabs hosted page", at: txn.createdAt, done: true },
     { label: "Gateway response received", at: txn.ipnReceivedAt, done: Boolean(txn.ipnReceivedAt) },
     {
       label: txn.status === "CAPTURED" ? "Payment captured (IPN verified)" : txn.status === "FAILED" ? "Payment failed" : "Awaiting IPN",
@@ -120,7 +120,7 @@ export default async function TransactionDetailPage({ params }: { params: Promis
           <pre className="overflow-x-auto rounded bg-brand-indigo/95 p-4 text-xs text-brand-cream">
 {JSON.stringify(
   {
-    request: { order: txn.reference, amount: txn.amountMinor, currency: txn.currency, note: "PLACEHOLDER — real field names come from the MEPS manual" },
+    request: { order: txn.reference, amount: txn.amountMinor, currency: txn.currency, note: "sent to PayTabs /payment/request" },
     response: txn.providerRef ? { transactionId: txn.providerRef, result: txn.status } : null,
   },
   null,
