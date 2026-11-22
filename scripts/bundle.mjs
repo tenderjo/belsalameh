@@ -4,7 +4,7 @@
  *
  * Output: belsalameh-deploy.zip  — everything the server needs, no npm/build.
  */
-import { cpSync, rmSync, mkdirSync, existsSync } from "node:fs";
+import { cpSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 
 const OUT = "deploy";
@@ -22,7 +22,12 @@ mkdirSync(OUT, { recursive: true });
 // standalone already contains .next/static, public and node_modules/.prisma
 // (copied by the postbuild step).
 cpSync(".next/standalone", OUT, { recursive: true });
-cpSync("web.config", `${OUT}/web.config`);
+// Next copies the build machine's .env files into standalone; they must never ship (they'd overwrite the server's own).
+for (const f of [".env", ".env.local", ".env.production", ".env.production.local"]) rmSync(`${OUT}/${f}`, { force: true });
+// In the bundle server.js sits at the root (from-source installs have it under .next\standalone).
+const webConfig = readFileSync("web.config", "utf8").replace(/\.\\\.next\\standalone\\server\.js/, ".\\server.js");
+if (!webConfig.includes('arguments=".\\server.js"')) throw new Error("web.config: could not point IIS at .\\server.js");
+writeFileSync(`${OUT}/web.config`, webConfig);
 cpSync(".env.example", `${OUT}/.env.example`);
 cpSync("DEPLOY.md", `${OUT}/DEPLOY.md`);
 cpSync("scripts", `${OUT}/scripts`, { recursive: true });
