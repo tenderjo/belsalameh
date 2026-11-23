@@ -26,6 +26,9 @@ export type MembershipPlan = {
   durationMonths: number;
 };
 
+/** Shown on the website while an admin has paused payments (Admin › Settings). */
+export const PAYMENTS_PAUSED_MESSAGE = "New memberships are temporarily unavailable. Please check back soon.";
+
 /** Quick-pick lengths in the admin; anything else is a custom number of months. */
 export const DURATION_PRESETS = [12, 24, 36] as const;
 export const MIN_MONTHS = 1;

@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { PAYMENTS_LIVE } from "@/lib/config";
 import { createPendingTransaction } from "@/lib/payments";
 import { createHostedPayment, paytabsConfigured } from "@/lib/paytabs";
+import { getMembershipSettings } from "@/lib/membership-settings";
+import { PAYMENTS_PAUSED_MESSAGE } from "@/lib/membership";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 /**
@@ -18,6 +20,11 @@ export async function startCheckout(
   _prev: CheckoutState,
   formData: FormData,
 ): Promise<CheckoutState> {
+  // Admin paused payments (Settings): refuse even if a stale pop-up still shows the form.
+  if ((await getMembershipSettings()).paymentsPaused) {
+    return { errors: {}, formError: PAYMENTS_PAUSED_MESSAGE };
+  }
+
   // Extra people arrive as parallel lists (one name + one, possibly empty, email per row).
   const partyNames = formData.getAll("partyName").map(String);
   const partyEmails = formData.getAll("partyEmail").map(String);

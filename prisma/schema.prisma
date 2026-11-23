@@ -95,6 +95,7 @@ model MembershipSettings {
   id              String   @id @default("default") @db.NVarChar(20)
   priceMinor      Int // total price for `durationMonths`, per person, in minor units (JOD: 1000 = 1.000)
   durationMonths  Int
+  paymentsPaused  Boolean  @default(false) // admin kill switch: hides the public checkout and refuses new orders
   updatedAt       DateTime @updatedAt
 
   @@map("MembershipSettings")

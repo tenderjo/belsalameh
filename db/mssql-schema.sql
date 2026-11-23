@@ -89,6 +89,7 @@ CREATE TABLE dbo.MembershipSettings (
                     CONSTRAINT DF_MembershipSettings_id DEFAULT 'default',
     priceMinor      INT          NOT NULL,   -- total for durationMonths, per person (JOD: 1000 = 1.000)
     durationMonths  INT          NOT NULL,
+    paymentsPaused  BIT          NOT NULL CONSTRAINT DF_MembershipSettings_paymentsPaused DEFAULT 0,
     updatedAt       DATETIME2    NOT NULL CONSTRAINT DF_MembershipSettings_updatedAt DEFAULT SYSUTCDATETIME()
 );
 

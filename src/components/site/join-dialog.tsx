@@ -4,7 +4,9 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, Check, TriangleAlert, X } from "lucide-react";
 import { CheckoutForm } from "./checkout-form";
-import { durationLabel, expiryFrom, type MembershipPlan } from "@/lib/membership";
+import { PAYMENTS_PAUSED_MESSAGE, durationLabel, expiryFrom, type MembershipPlan } from "@/lib/membership";
+
+type PublicPlan = MembershipPlan & { paymentsPaused: boolean };
 import { formatExpiry, formatMoney } from "@/lib/format";
 import { PARTNER, SITE } from "@/lib/site-content";
 
@@ -26,14 +28,14 @@ export function JoinDialog({ open, onClose }: { open: boolean; onClose: () => vo
   const titleId = useId();
   const [step, setStep] = useState<"info" | "form">("info");
   // The plan (price + length) is whatever the admin has saved right now, fetched fresh each time the pop-up opens.
-  const [plan, setPlan] = useState<MembershipPlan | null>(null);
+  const [plan, setPlan] = useState<PublicPlan | null>(null);
   const [planError, setPlanError] = useState(false);
 
   const loadPlan = useCallback(() => {
     setPlanError(false);
     fetch("/api/membership", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((p: MembershipPlan) => setPlan(p))
+      .then((p: PublicPlan) => setPlan(p))
       .catch(() => setPlanError(true));
   }, []);
   useEffect(() => {
@@ -124,7 +126,7 @@ export function JoinDialog({ open, onClose }: { open: boolean; onClose: () => vo
             </p>
 
             <div className="mt-5">
-              {plan && <CheckoutForm plan={plan} />}
+              {plan && !plan.paymentsPaused && <CheckoutForm plan={plan} />}
             </div>
           </>
         )}
@@ -145,7 +147,7 @@ function InfoStep({
 }: {
   titleId: string;
   titleRef: React.RefObject<HTMLHeadingElement | null>;
-  plan: MembershipPlan | null;
+  plan: PublicPlan | null;
   error: boolean;
   onRetry: () => void;
   onContinue: () => void;
@@ -214,15 +216,23 @@ function InfoStep({
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={onContinue}
-        disabled={!plan}
-        className="mt-6 flex h-12 w-full items-center justify-center rounded bg-brand-indigo text-sm font-semibold text-white transition-colors hover:bg-brand-indigo/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
-      >
-        I understand, continue
-      </button>
-      <p className="mt-2 text-center text-xs text-ink-subtle">Joining with family or friends? You can add them on the next step.</p>
+      {plan?.paymentsPaused ? (
+        <p role="status" className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-3 py-3 text-center text-sm font-medium text-[#7a4d0f]">
+          {PAYMENTS_PAUSED_MESSAGE}
+        </p>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={onContinue}
+            disabled={!plan}
+            className="mt-6 flex h-12 w-full items-center justify-center rounded bg-brand-indigo text-sm font-semibold text-white transition-colors hover:bg-brand-indigo/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+          >
+            I understand, continue
+          </button>
+          <p className="mt-2 text-center text-xs text-ink-subtle">Joining with family or friends? You can add them on the next step.</p>
+        </>
+      )}
     </>
   );
 }
